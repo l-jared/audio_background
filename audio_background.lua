@@ -21,12 +21,11 @@ end
 
 function dominant_color(file)
     local args = {
-        "convert",
-        file,
-        "-format",
-        "%c",
-        "-colors",
-        "5",
+        "convert", file,
+        "-format", "%c",
+        "-scale", "50x50!",
+        "-sharpen", "5x5",
+        "-colors", "5",
         "histogram:info:-"
     }
     if not legacy then
@@ -60,14 +59,10 @@ mp.observe_property("vid", "number", function(_, vid)
             dominant_color(coverart)
         elseif path ~= "" and options.extract_embedded_art then
             local ffmpeg = {
-                "ffmpeg",
-                "-loglevel",
-                "8",
-                "-i",
-                path,
-                "-vframes",
-                "1",
-                "-y",
+                "ffmpeg", "-y",
+                "-loglevel", "8",
+                "-i", path,
+                "-vframes", "1",
                 options.temp_file
             }
             if not legacy then
