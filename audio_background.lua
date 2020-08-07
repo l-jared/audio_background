@@ -7,7 +7,7 @@ local options = {
 mp.options = require "mp.options"
 mp.options.read_options(options)
 
-local utils = require 'mp.utils'
+local utils = require "mp.utils"
 local last_dir = ""
 local legacy = mp.command_native_async == nil
 
@@ -15,13 +15,53 @@ if options.fallback == "" then
     options.fallback = mp.get_property("background", "#000000")
 end
 
+local ON_WINDOWS = (package.config:sub(1,1) ~= "/")
+
 if options.temp_file == "" then
-    options.temp_file = utils.join_path((package.config:sub(1,1) ~= "/") and os.getenv("TEMP") or "/tmp/", "mpv_audio_background.jpg")
+    options.temp_file = utils.join_path(ON_WINDOWS and os.getenv("TEMP") or "/tmp/", "mpv_audio_background.jpg")
 end
+
+function file_exists(name)
+    local f = io.open(name, "rb")
+    if f ~= nil then
+        local ok, err, code = f:read(1)
+        io.close(f)
+        return code == nil
+    else
+        return false
+    end
+end
+
+function find_executable(name)
+    local delim = ON_WINDOWS and ";" or ":"
+
+    local pwd = os.getenv("PWD") or utils.getcwd()
+    local path = os.getenv("PATH")
+
+    local env_path = pwd .. delim .. path
+    
+    if ON_WINDOWS then
+        name = name .. ".exe"
+    end
+
+    local result, filename
+    for path_dir in env_path:gmatch("[^" .. delim .. "]+") do
+        filename = utils.join_path(path_dir, name)
+        if file_exists(filename) then
+            result = filename
+            break
+        end
+    end
+
+    return result
+end
+
+local ffmpeg_path = find_executable("ffmpeg")
+local convert_path = find_executable("convert")
 
 function dominant_color(file)
     local args = {
-        "convert", file,
+        convert_path, file,
         "-format", "%c",
         "-scale", "50x50!",
         "-sharpen", "5x5",
@@ -59,7 +99,7 @@ mp.observe_property("vid", "number", function(_, vid)
             dominant_color(coverart)
         elseif path ~= "" and options.extract_embedded_art then
             local ffmpeg = {
-                "ffmpeg", "-y",
+                ffmpeg_path, "-y",
                 "-loglevel", "8",
                 "-i", path,
                 "-vframes", "1",
