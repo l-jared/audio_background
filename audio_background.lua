@@ -94,8 +94,15 @@ mp.observe_property("vid", "number", function(_, vid)
     local dir, filename = utils.split_path(path)
     if dir ~= last_dir then
         last_dir = dir
-        coverart = mp.get_property("track-list/" .. tostring(vid) .. "/external-filename", "")
-        if coverart ~= "" then
+        local coverart = ""
+        local tracklist = mp.get_property_native("track-list")
+        for _, track in ipairs(tracklist) do
+            if track.selected and track.type == "video" then
+                coverart = track["external-filename"]
+                break
+            end
+        end
+        if (coverart or "") ~= "" then
             dominant_color(coverart)
         elseif path ~= "" and options.extract_embedded_art then
             local ffmpeg = {
